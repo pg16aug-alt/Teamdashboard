@@ -108,23 +108,32 @@ begin
   end if;
   select coalesce(max(version), 0) + 1 into new.version from submissions where task_id = new.task_id;
   new.submitted_by := auth.uid();
-  if new.is_final then
-    if t.reviewer_id is null then
-      new.review := 'approved';
-      update tasks set status = 'done', completed_at = now() where id = t.id;
-    else
-      new.review := 'pending';
-      update tasks set status = 'in_review' where id = t.id;
-    end if;
+  -- no reviewer: a final submission is self-approved; drafts need no review
+  if t.reviewer_id is null then
+    new.review := case when new.is_final then 'approved'::review_status else null end;
   else
-    new.review := case when t.reviewer_id is null then null else 'pending' end;
-    update tasks set status = case when t.reviewer_id is null then 'in_progress' else 'in_review' end
-      where id = t.id;
+    new.review := 'pending';
   end if;
   return new;
 end $$;
 create trigger submission_before_insert before insert on submissions
   for each row execute function on_submission();
+
+-- runs after the row exists so the Done guard can see the approved final
+create function after_submission() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.is_final and new.review = 'approved' then
+    update tasks set status = 'done', completed_at = now() where id = new.task_id;
+  elsif new.review = 'pending' then
+    update tasks set status = 'in_review' where id = new.task_id;
+  else
+    update tasks set status = 'in_progress' where id = new.task_id;
+  end if;
+  return new;
+end $$;
+create trigger submission_after_insert after insert on submissions
+  for each row execute function after_submission();
 
 create function review_submission(sub uuid, approve boolean, note text) returns void
 language plpgsql security definer set search_path = public as $$
