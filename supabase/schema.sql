@@ -138,7 +138,7 @@ end $$;
 create trigger submission_after_insert after insert on submissions
   for each row execute function after_submission();
 
-create function review_submission(p_sub uuid, p_approve boolean, p_note text) returns void
+create function review_task_submission(p_sub uuid, p_approve boolean, p_note text) returns void
 language plpgsql security definer set search_path = public as $$
 declare s submissions; t tasks;
 begin
@@ -213,7 +213,7 @@ create policy admin_write on attendance for all to authenticated
   using (current_role_is('admin')) with check (current_role_is('admin'));
 
 -- assignees may only toggle todo <-> in_progress; every other status change
--- goes through submissions / review_submission
+-- goes through submissions / review_task_submission
 create function set_task_progress(t uuid, started boolean) returns void
 language plpgsql security definer set search_path = public as $$
 begin
@@ -225,4 +225,9 @@ end $$;
 -- lock down RPC surface: signed-in users only
 revoke execute on all functions in schema public from public, anon;
 grant execute on function current_role_is(user_role[]), is_assignee(uuid),
-  review_submission(uuid, boolean, text), set_task_progress(uuid, boolean) to authenticated;
+  review_task_submission(uuid, boolean, text), set_task_progress(uuid, boolean) to authenticated;
+
+-- NOTE: the live project also holds a leftover, disabled function
+-- review_submission(uuid, boolean, text) from an earlier draft (no one can
+-- execute it). Remove it with:
+--   drop function public.review_submission(uuid, boolean, text);
