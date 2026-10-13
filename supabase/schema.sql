@@ -106,6 +106,9 @@ begin
   if not (is_assignee(t.id) or current_role_is('admin','manager')) then
     raise exception 'Only an assignee can submit work';
   end if;
+  if t.status = 'done' then
+    raise exception 'This task is already completed';
+  end if;
   select coalesce(max(version), 0) + 1 into new.version from submissions where task_id = new.task_id;
   new.submitted_by := auth.uid();
   -- no reviewer: a final submission is self-approved; drafts need no review
@@ -135,20 +138,25 @@ end $$;
 create trigger submission_after_insert after insert on submissions
   for each row execute function after_submission();
 
-create function review_submission(sub uuid, approve boolean, note text) returns void
+create function review_submission(p_sub uuid, p_approve boolean, p_note text) returns void
 language plpgsql security definer set search_path = public as $$
 declare s submissions; t tasks;
 begin
-  select * into s from submissions where id = sub;
+  select * into s from submissions where id = p_sub;
   select * into t from tasks where id = s.task_id for update;
+  if s.review is distinct from 'pending' then
+    raise exception 'This submission is not awaiting review';
+  end if;
   if t.reviewer_id is distinct from auth.uid() and not current_role_is('admin') then
     raise exception 'Only the reviewer can review this task';
   end if;
-  update submissions set review = case when approve then 'approved'::review_status else 'changes_requested' end,
-    review_note = note, reviewed_by = auth.uid(), reviewed_at = now() where id = sub;
-  if approve and s.is_final then
+  update submissions set
+    review = case when p_approve then 'approved'::review_status else 'changes_requested' end,
+    review_note = p_note, reviewed_by = auth.uid(), reviewed_at = now()
+  where id = p_sub;
+  if p_approve and s.is_final then
     update tasks set status = 'done', completed_at = now() where id = t.id;
-  elsif not approve then
+  elsif not p_approve then
     update tasks set status = 'changes_requested' where id = t.id;
   else
     update tasks set status = 'in_progress' where id = t.id;  -- draft approved, keep working
@@ -191,8 +199,6 @@ create policy admin_write on projects for all to authenticated
 create policy read_all on tasks for select to authenticated using (true);
 create policy mgr_write on tasks for all to authenticated
   using (current_role_is('admin','manager')) with check (current_role_is('admin','manager'));
-create policy assignee_progress on tasks for update to authenticated
-  using (is_assignee(id)) with check (is_assignee(id));
 
 create policy read_all on task_assignees for select to authenticated using (true);
 create policy mgr_write on task_assignees for all to authenticated
@@ -205,3 +211,18 @@ create policy assignee_insert on submissions for insert to authenticated
 create policy read_all on attendance for select to authenticated using (true);
 create policy admin_write on attendance for all to authenticated
   using (current_role_is('admin')) with check (current_role_is('admin'));
+
+-- assignees may only toggle todo <-> in_progress; every other status change
+-- goes through submissions / review_submission
+create function set_task_progress(t uuid, started boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not is_assignee(t) then raise exception 'Not assigned to you'; end if;
+  update tasks set status = case when started then 'in_progress'::task_status else 'todo' end
+    where id = t and status in ('todo', 'in_progress', 'changes_requested');
+end $$;
+
+-- lock down RPC surface: signed-in users only
+revoke execute on all functions in schema public from public, anon;
+grant execute on function current_role_is(user_role[]), is_assignee(uuid),
+  review_submission(uuid, boolean, text), set_task_progress(uuid, boolean) to authenticated;
