@@ -90,18 +90,18 @@ export default async function TaskPage({
           ))}
         </ol>
 
-        {isReviewer && pending.length > 0 && (
-          <form action={reviewSubmission} className="mt-4 space-y-2 rounded-md bg-violet-50 p-3">
+        {isReviewer && pending.map((ps) => (
+          <form key={ps.id} action={reviewSubmission} className="mt-4 space-y-2 rounded-md bg-violet-50 p-3">
             <input type="hidden" name="task_id" value={task.id} />
-            <input type="hidden" name="submission_id" value={pending[pending.length - 1].id} />
-            <p className="text-sm font-medium">Review v{pending[pending.length - 1].version}</p>
-            <textarea name="note" rows={2} placeholder="Feedback (required if requesting changes)" className="input" />
+            <input type="hidden" name="submission_id" value={ps.id} />
+            <p className="text-sm font-medium">Review v{ps.version} ({ps.is_final ? "final" : "draft"})</p>
+            <textarea name="note" rows={2} aria-label={`Feedback on v${ps.version}`} placeholder="Feedback (required if requesting changes)" className="input" />
             <div className="flex gap-2">
               <button name="decision" value="approve" className="btn">Approve</button>
               <button name="decision" value="changes" className="btn-ghost">Request changes</button>
             </div>
           </form>
-        )}
+        ))}
 
         {(isAssignee || isManager) && !done && task.status !== "in_review" && (
           <form action={submitWork} className="mt-4 space-y-3 border-t border-slate-200 pt-4">
@@ -109,15 +109,15 @@ export default async function TaskPage({
             <p className="text-sm font-medium">Submit a draft or the final version</p>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="sm:col-span-2">
-                <label className="label">Link (Google Drive etc.)</label>
-                <input name="link" type="url" required placeholder="https://drive.google.com/..." className="input" />
+                <label htmlFor="link-google-drive-et" className="label">Link (Google Drive etc.)</label>
+                <input id="link-google-drive-et" name="link" type="url" required placeholder="https://drive.google.com/..." className="input" />
               </div>
               <div>
-                <label className="label">Hours spent on this version</label>
-                <input name="hours_spent" type="number" min="0.25" step="0.25" required className="input" />
+                <label htmlFor="hours-spent-on-this-" className="label">Hours spent on this version</label>
+                <input id="hours-spent-on-this-" name="hours_spent" type="number" min="0.25" step="0.25" required className="input" />
               </div>
             </div>
-            <div><label className="label">Note</label><input name="note" className="input" /></div>
+            <div><label htmlFor="note" className="label">Note</label><input id="note" name="note" className="input" /></div>
             <div className="flex gap-2">
               <button name="kind" value="draft" className="btn-ghost">Submit draft</button>
               <button name="kind" value="final" className="btn">{task.reviewer_id ? "Submit final for review" : "Submit final and complete"}</button>

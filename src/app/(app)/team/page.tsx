@@ -19,18 +19,18 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
             <input type="hidden" name="id" value={p.id} />
             <div className="w-48 text-sm font-medium">{p.full_name}{!p.active && <span className="ml-2 text-xs text-amber-700">pending</span>}</div>
             <div>
-              <label className="label">Role</label>
-              <select name="role" defaultValue={p.role} className="input">
+              <label htmlFor={`role-${p.id}`} className="label">Role</label>
+              <select id={`role-${p.id}`} name="role" defaultValue={p.role} className="input">
                 <option value="employee">Employee</option><option value="manager">Manager</option><option value="admin">Admin / HR</option>
               </select>
             </div>
             <div>
-              <label className="label">Weekly capacity (h)</label>
-              <input name="weekly_capacity_hours" type="number" min="1" defaultValue={p.weekly_capacity_hours} className="input w-28" />
+              <label htmlFor={`weekly_capacity_hours-${p.id}`} className="label">Weekly capacity (h)</label>
+              <input id={`weekly_capacity_hours-${p.id}`} name="weekly_capacity_hours" type="number" min="1" defaultValue={p.weekly_capacity_hours} className="input w-28" />
             </div>
             <div>
-              <label className="label">Access</label>
-              <select name="active" defaultValue={p.active ? "1" : "0"} className="input">
+              <label htmlFor={`active-${p.id}`} className="label">Access</label>
+              <select id={`active-${p.id}`} name="active" defaultValue={p.active ? "1" : "0"} className="input">
                 <option value="1">Active</option><option value="0">Inactive</option>
               </select>
             </div>

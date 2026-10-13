@@ -20,8 +20,8 @@ export default async function NewTask({ searchParams }: { searchParams: Promise<
       <ErrorBanner error={sp.error} />
       <form action={createTask} className="card space-y-4">
         <div>
-          <label className="label">Client / project</label>
-          <select name="project_id" required className="input">
+          <label htmlFor="client-project" className="label">Client / project</label>
+          <select id="client-project" name="project_id" required className="input">
             {(projects ?? []).map((p) => {
               const c = p.clients as unknown as { name: string } | null;
               return <option key={p.id} value={p.id}>{c?.name} — {p.name}</option>;
@@ -30,22 +30,22 @@ export default async function NewTask({ searchParams }: { searchParams: Promise<
           {(projects ?? []).length === 0 && <p className="mt-1 text-xs text-amber-700">Add a client and project first (Clients page).</p>}
         </div>
         <div>
-          <label className="label">Title</label>
-          <input name="title" required className="input" />
+          <label htmlFor="title" className="label">Title</label>
+          <input id="title" name="title" required className="input" />
         </div>
         <div>
-          <label className="label">Description</label>
-          <textarea name="description" rows={3} className="input" />
+          <label htmlFor="description" className="label">Description</label>
+          <textarea id="description" name="description" rows={3} className="input" />
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <div><label className="label">Deadline</label><input name="deadline" type="date" required defaultValue={today()} className="input" /></div>
+          <div><label htmlFor="deadline" className="label">Deadline</label><input id="deadline" name="deadline" type="date" required defaultValue={today()} className="input" /></div>
           <div>
-            <label className="label">Priority</label>
-            <select name="priority" defaultValue="medium" className="input">
+            <label htmlFor="priority" className="label">Priority</label>
+            <select id="priority" name="priority" defaultValue="medium" className="input">
               <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
             </select>
           </div>
-          <div><label className="label">Estimated hours</label><input name="estimated_hours" type="number" min="0" step="0.5" className="input" /></div>
+          <div><label htmlFor="estimated-hours" className="label">Estimated hours</label><input id="estimated-hours" name="estimated_hours" type="number" min="0" step="0.5" className="input" /></div>
         </div>
         <fieldset>
           <legend className="label">Assignees (one or more)</legend>
@@ -60,8 +60,8 @@ export default async function NewTask({ searchParams }: { searchParams: Promise<
           </div>
         </fieldset>
         <div>
-          <label className="label">Reviewer (optional: leave empty if no hand-off is needed)</label>
-          <select name="reviewer_id" className="input">
+          <label htmlFor="reviewer-optional-le" className="label">Reviewer (optional: leave empty if no hand-off is needed)</label>
+          <select id="reviewer-optional-le" name="reviewer_id" className="input">
             <option value="">No review needed</option>
             {(people ?? []).map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
           </select>

@@ -30,7 +30,7 @@ export default async function Analytics({ searchParams }: { searchParams: Promis
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-xl font-semibold">Analytics</h1>
         <form className="flex items-end gap-2">
-          <div><label className="label">Completed in month</label><input type="month" name="month" defaultValue={month} className="input" /></div>
+          <div><label htmlFor="completed-in-month" className="label">Completed in month</label><input id="completed-in-month" type="month" name="month" defaultValue={month} className="input" /></div>
           <button className="btn-ghost">Apply</button>
         </form>
       </div>

@@ -34,7 +34,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
       {isAdmin && (
         <div className="card mb-6">
           <form className="mb-3 flex items-end gap-3">
-            <div><label className="label">Mark attendance for</label><input type="date" name="day" defaultValue={day} className="input" /></div>
+            <div><label htmlFor="mark-attendance-for" className="label">Mark attendance for</label><input id="mark-attendance-for" type="date" name="day" defaultValue={day} className="input" /></div>
             <button className="btn-ghost">Go</button>
           </form>
           <ul className="divide-y divide-slate-100">

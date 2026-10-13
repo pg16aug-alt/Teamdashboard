@@ -38,22 +38,22 @@ export default async function TaskBoard({ searchParams }: { searchParams: Promis
       <ErrorBanner error={sp.error} />
       <form className="mb-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="label">Client</label>
-          <select name="client" defaultValue={sp.client ?? ""} className="input">
+          <label htmlFor="client" className="label">Client</label>
+          <select id="client" name="client" defaultValue={sp.client ?? ""} className="input">
             <option value="">All</option>
             {clients?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="label">Person</label>
-          <select name="person" defaultValue={sp.person ?? ""} className="input">
+          <label htmlFor="person" className="label">Person</label>
+          <select id="person" name="person" defaultValue={sp.person ?? ""} className="input">
             <option value="">Everyone</option>
             {people?.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
           </select>
         </div>
         <div>
-          <label className="label">Status</label>
-          <select name="status" defaultValue={sp.status ?? ""} className="input">
+          <label htmlFor="status" className="label">Status</label>
+          <select id="status" name="status" defaultValue={sp.status ?? ""} className="input">
             <option value="">All</option>
             <option value="open">Open (not done)</option>
             {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}

@@ -17,8 +17,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       <ErrorBanner error={sp.error} />
       {profile.role === "admin" ? (
         <form action={addClient} className="card flex flex-wrap items-end gap-3">
-          <div><label className="label">New client</label><input name="name" required className="input" /></div>
-          <div className="min-w-64 flex-1"><label className="label">Logo URL (optional)</label><input name="logo_url" type="url" className="input" /></div>
+          <div><label htmlFor="new-client" className="label">New client</label><input id="new-client" name="name" required className="input" /></div>
+          <div className="min-w-64 flex-1"><label htmlFor="logo-url-optional" className="label">Logo URL (optional)</label><input id="logo-url-optional" name="logo_url" type="url" className="input" /></div>
           <button className="btn">Add client</button>
         </form>
       ) : (

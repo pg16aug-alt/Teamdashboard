@@ -14,13 +14,13 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
       <h1 className="text-xl font-semibold">Client month-end report</h1>
       <form className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="label">Client</label>
-          <select name="client" defaultValue={sp.client ?? ""} className="input" required>
+          <label htmlFor="client" className="label">Client</label>
+          <select id="client" name="client" defaultValue={sp.client ?? ""} className="input" required>
             <option value="" disabled>Select…</option>
             {clients?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <div><label className="label">Month</label><input type="month" name="month" defaultValue={month} className="input" /></div>
+        <div><label htmlFor="month" className="label">Month</label><input id="month" type="month" name="month" defaultValue={month} className="input" /></div>
         <button className="btn-ghost">Preview</button>
         {report && <a className="btn" href={`/api/export?client=${sp.client}&month=${month}`}>Download Excel</a>}
       </form>
