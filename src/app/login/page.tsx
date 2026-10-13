@@ -47,17 +47,17 @@ export default function LoginPage() {
       <form onSubmit={submit} className="card space-y-3">
         {mode === "up" && (
           <div>
-            <label className="label">Full name</label>
-            <input className="input" required value={name} onChange={(e) => setName(e.target.value)} />
+            <label htmlFor="name" className="label">Full name</label>
+            <input id="name" autoComplete="name" className="input" required value={name} onChange={(e) => setName(e.target.value)} />
           </div>
         )}
         <div>
-          <label className="label">Email</label>
-          <input className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label htmlFor="email" className="label">Email</label>
+          <input id="email" autoComplete="email" className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div>
-          <label className="label">Password</label>
-          <input className="input" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+          <label htmlFor="password" className="label">Password</label>
+          <input id="password" autoComplete={mode === "in" ? "current-password" : "new-password"} className="input" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
         {msg && <p className="text-sm text-red-600">{msg}</p>}
         <button className="btn w-full" disabled={busy}>{mode === "in" ? "Sign in" : "Sign up"}</button>
