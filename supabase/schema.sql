@@ -231,3 +231,24 @@ grant execute on function current_role_is(user_role[]), is_assignee(uuid),
 -- review_submission(uuid, boolean, text) from an earlier draft (no one can
 -- execute it). Remove it with:
 --   drop function public.review_submission(uuid, boolean, text);
+
+-- hardening (applied after initial schema) ------------------------------
+-- New sign-ups are inactive until an admin approves them; only active users
+-- can read anything. Trigger functions are not callable as RPC.
+create or replace function handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into profiles (id, full_name, active)
+  values (new.id, coalesce(new.raw_user_meta_data->>'full_name', new.email), false);
+  return new;
+end $$;
+revoke execute on function after_submission(), on_submission(), handle_new_user()
+  from public, anon, authenticated;
+create policy self_read on profiles for select to authenticated using (id = auth.uid());
+alter policy read_all on profiles using (current_role_is('admin','manager','employee'));
+alter policy read_all on clients using (current_role_is('admin','manager','employee'));
+alter policy read_all on projects using (current_role_is('admin','manager','employee'));
+alter policy read_all on tasks using (current_role_is('admin','manager','employee'));
+alter policy read_all on task_assignees using (current_role_is('admin','manager','employee'));
+alter policy read_all on submissions using (current_role_is('admin','manager','employee'));
+alter policy read_all on attendance using (current_role_is('admin','manager','employee'));
