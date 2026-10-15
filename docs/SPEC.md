@@ -2,11 +2,12 @@
 
 Internal tool to track company tasks per client/project, record attendance, and report on delivery performance.
 
-## Stack (free tier, minimal maintenance)
-- **Next.js (App Router) + TypeScript + Tailwind**, hosted on Vercel (free).
-- **Supabase** (free): Postgres, email/password auth, row-level security. Passkeys are not built in; deferred.
+## Stack (free tier, no servers to run)
+- **Next.js + TypeScript + Tailwind**, built as a static site and hosted on **Firebase Hosting** (free).
+- **Firebase Auth** (email/password) and **Cloud Firestore** (free Spark plan). No Cloud Functions, so no billing account is needed.
+- **All enforcement lives in `firestore.rules`** and is covered by emulator tests (`npm test`). Passkeys are not built in; deferred.
 - **Files live in the company Google Drive.** The app stores links only, so no file storage or size limits.
-- **Excel export** with `exceljs` (client month-end report).
+- **Excel export** is generated in the browser with `exceljs`.
 
 ## Roles
 | Role | Can do |
@@ -20,7 +21,7 @@ Internal tool to track company tasks per client/project, record attendance, and 
 - A task has **one or more assignees** and an **optional reviewer** (any user, not necessarily a manager).
 - **No reviewer:** the assignee submits a *final* link + hours, and the task is Done.
 - **With reviewer:** a final submission moves the task to In review. The reviewer approves (Done) or requests changes (back to the assignee).
-- **Done requires** a Drive/link submission and hours spent. Enforced in the database, not only the UI.
+- **Done requires** a Drive/link submission and hours spent. Enforced by Firestore security rules, not only the UI.
 
 ## Drafts and revisions
 Each submission is a numbered version (v1, v2, ...) on the task:

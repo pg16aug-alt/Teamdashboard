@@ -14,9 +14,9 @@ export function DeliveryChart({ data }: { data: PersonStats[] }) {
         <YAxis allowDecimals={false} fontSize={12} />
         <Tooltip />
         <Legend />
-        <Bar dataKey="early" name="Early" stackId="a" fill={C.early} />
-        <Bar dataKey="onTime" name="On time" stackId="a" fill={C.onTime} />
-        <Bar dataKey="late" name="Late" stackId="a" fill={C.late} />
+        <Bar isAnimationActive={false} dataKey="early" name="Early" stackId="a" fill={C.early} />
+        <Bar isAnimationActive={false} dataKey="onTime" name="On time" stackId="a" fill={C.onTime} />
+        <Bar isAnimationActive={false} dataKey="late" name="Late" stackId="a" fill={C.late} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -32,8 +32,8 @@ export function WorkloadChart({ data }: { data: PersonStats[] }) {
         <YAxis fontSize={12} />
         <Tooltip />
         <Legend />
-        <Bar dataKey="openEstHours" name="Open work (est. hours)" fill={C.load} />
-        <Bar dataKey="capacity" name="Weekly capacity (h)" fill={C.cap} />
+        <Bar isAnimationActive={false} dataKey="openEstHours" name="Open work (est. hours)" fill={C.load} />
+        <Bar isAnimationActive={false} dataKey="capacity" name="Weekly capacity (h)" fill={C.cap} />
       </BarChart>
     </ResponsiveContainer>
   );
