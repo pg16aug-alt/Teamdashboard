@@ -56,9 +56,9 @@ export function taskFlag(t: Pick<Task, "status" | "deadline">): Flag {
 export type Timing = "early" | "on_time" | "late";
 
 /** Judged on the date the final version was approved. Early = 1+ days before deadline. */
-export function completionTiming(t: Pick<Task, "completed_at" | "deadline">): Timing | null {
-  if (!t.completed_at) return null;
-  const done = new Date(t.completed_at);
+export function completionTiming(t: Pick<Task, "completedAt" | "deadline">): Timing | null {
+  if (!t.completedAt) return null;
+  const done = new Date(t.completedAt);
   const doneDay = `${done.getFullYear()}-${String(done.getMonth() + 1).padStart(2, "0")}-${String(done.getDate()).padStart(2, "0")}`;
   const diff = daysBetween(doneDay, t.deadline);
   return diff < 0 ? "late" : diff >= 1 ? "early" : "on_time";

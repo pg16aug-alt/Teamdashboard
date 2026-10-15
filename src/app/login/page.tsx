@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth-context";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<"in" | "up">("in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -17,25 +18,18 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setMsg(null);
-    const supabase = createClient();
-    if (mode === "in") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setMsg(error.message);
-      else {
-        router.push("/");
-        router.refresh();
-      }
-    } else {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: name } },
-      });
-      if (error) setMsg(error.message);
-      else if (data.session) {
-        router.push("/");
-        router.refresh();
-      } else setMsg("Account created. Check your email to confirm, then sign in. An admin must approve your account before you can see anything.");
+    try {
+      if (mode === "in") await signIn(email, password);
+      else await signUp(name, email, password);
+      router.push("/");
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? "";
+      setMsg(
+        code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found") ? "Wrong email or password"
+        : code.includes("email-already-in-use") ? "That email already has an account. Sign in instead."
+        : code.includes("weak-password") ? "Password must be at least 6 characters"
+        : (err as Error).message,
+      );
     }
     setBusy(false);
   }

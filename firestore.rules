@@ -1,0 +1,157 @@
+rules_version = '2';
+
+// Team Dashboard security rules. All enforcement lives here (no server code):
+// roles, "Done needs an approved final link + hours", review hand-off, attendance.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function me() { return get(userDoc()).data; }
+    function active() { return signedIn() && exists(userDoc()) && me().active == true; }
+    function isAdmin() { return active() && me().role == 'admin'; }
+    function isMgr() { return active() && me().role in ['admin', 'manager']; }
+    function taskPath(tid) { return /databases/$(database)/documents/tasks/$(tid); }
+    function subPath(tid, sid) { return /databases/$(database)/documents/tasks/$(tid)/submissions/$(sid); }
+    function changed(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+
+    // users: anyone can create only their own inactive employee profile; admins manage the rest
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || active());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['fullName', 'email', 'role', 'active', 'weeklyCapacityHours'])
+        && request.resource.data.fullName is string && request.resource.data.fullName.size() > 0
+        && request.resource.data.role == 'employee'
+        && request.resource.data.active == false
+        && request.resource.data.weeklyCapacityHours == 40;
+      allow update: if isAdmin() && request.resource.data.role in ['admin', 'manager', 'employee']
+        && request.resource.data.active is bool
+        && request.resource.data.weeklyCapacityHours is number && request.resource.data.weeklyCapacityHours > 0;
+    }
+
+    match /clients/{id} {
+      allow read: if active();
+      allow write: if isAdmin();
+    }
+    match /projects/{id} {
+      allow read: if active();
+      allow write: if isMgr();
+    }
+
+    // attendance: one doc per person per day, id = "<uid>_<YYYY-MM-DD>", admin/HR only
+    match /attendance/{id} {
+      allow read: if active();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['userId', 'day', 'status', 'markedBy'])
+        && id == request.resource.data.userId + '_' + request.resource.data.day
+        && request.resource.data.day.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.status in ['present', 'absent', 'half_day', 'leave']
+        && request.resource.data.markedBy == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    // lets the app read every submission at once (analytics)
+    match /{path=**}/submissions/{sid} {
+      allow read: if active();
+    }
+
+    match /tasks/{tid} {
+      allow read: if active();
+
+      allow create: if isMgr()
+        && request.resource.data.keys().hasOnly(['projectId', 'projectName', 'clientId', 'clientName', 'title', 'description',
+            'status', 'priority', 'deadline', 'estimatedHours', 'reviewerId', 'assigneeIds', 'submissionCount',
+            'reviewSub', 'completedAt', 'createdBy', 'createdAt'])
+        && request.resource.data.title is string && request.resource.data.title.size() > 0
+        && request.resource.data.status == 'todo'
+        && request.resource.data.priority in ['low', 'medium', 'high']
+        && request.resource.data.deadline.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.assigneeIds is list && request.resource.data.assigneeIds.size() > 0
+        && request.resource.data.submissionCount == 0
+        && request.resource.data.completedAt == null
+        && request.resource.data.reviewSub == null
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if
+        // 1. assignee toggles To do <-> In progress only
+        (active() && request.auth.uid in resource.data.assigneeIds
+          && changed(['status'])
+          && resource.data.status in ['todo', 'in_progress', 'changes_requested']
+          && request.resource.data.status in ['todo', 'in_progress'])
+        // 2. managers edit details; they can never move a task into or out of Done
+        || (isMgr()
+          && changed(['projectId', 'projectName', 'clientId', 'clientName', 'title', 'description', 'priority',
+              'deadline', 'estimatedHours', 'reviewerId', 'assigneeIds', 'status'])
+          && (resource.data.status == 'done') == (request.resource.data.status == 'done'))
+        // 3. a new submission (written in the same batch) drives the task status
+        || (active() && changed(['submissionCount', 'status', 'completedAt'])
+          && (request.auth.uid in resource.data.assigneeIds || isMgr())
+          && resource.data.status != 'done'
+          && request.resource.data.submissionCount == resource.data.submissionCount + 1
+          && existsAfter(subPath(tid, 'v' + string(request.resource.data.submissionCount)))
+          && !exists(subPath(tid, 'v' + string(request.resource.data.submissionCount)))
+          && submissionTransitionOk(getAfter(subPath(tid, 'v' + string(request.resource.data.submissionCount))).data))
+        // 4. the reviewer's decision (written in the same batch) drives the task status
+        || (active() && changed(['status', 'completedAt', 'reviewSub'])
+          && (resource.data.reviewerId == request.auth.uid || isAdmin())
+          && request.resource.data.reviewSub is string
+          && get(subPath(tid, request.resource.data.reviewSub)).data.review == 'pending'
+          && reviewTransitionOk(getAfter(subPath(tid, request.resource.data.reviewSub)).data));
+
+      function sameCompleted() { return request.resource.data.completedAt == resource.data.completedAt; }
+
+      function submissionTransitionOk(sub) {
+        let toDone = sub.isFinal == true && resource.data.reviewerId == null;
+        let expected = toDone ? 'done' : (resource.data.reviewerId != null ? 'in_review' : 'in_progress');
+        return request.resource.data.status == expected
+          && (toDone ? request.resource.data.completedAt == request.time : sameCompleted());
+      }
+
+      function reviewTransitionOk(sub) {
+        let expected = sub.review == 'changes_requested' ? 'changes_requested' : (sub.isFinal == true ? 'done' : 'in_progress');
+        return sub.review in ['approved', 'changes_requested']
+          && request.resource.data.status == expected
+          && (expected == 'done' ? request.resource.data.completedAt == request.time : sameCompleted());
+      }
+
+      match /submissions/{sid} {
+        allow read: if active();
+
+        // create: v1, v2, ... in order, with a real link and hours; review state is fixed by the task's reviewer
+        allow create: if active()
+          && (request.auth.uid in get(taskPath(tid)).data.assigneeIds || isMgr())
+          && get(taskPath(tid)).data.status != 'done'
+          && request.resource.data.keys().hasOnly(['version', 'link', 'hoursSpent', 'note', 'isFinal', 'submittedBy',
+              'submittedAt', 'review', 'reviewNote', 'reviewedBy', 'reviewedAt'])
+          && request.resource.data.version == get(taskPath(tid)).data.submissionCount + 1
+          && getAfter(taskPath(tid)).data.submissionCount == request.resource.data.version
+          && sid == 'v' + string(request.resource.data.version)
+          && request.resource.data.link is string && request.resource.data.link.matches('^https?://.+')
+          && request.resource.data.hoursSpent is number && request.resource.data.hoursSpent > 0
+          && request.resource.data.isFinal is bool
+          && (request.resource.data.note == null || request.resource.data.note is string)
+          && request.resource.data.submittedBy == request.auth.uid
+          && request.resource.data.submittedAt == request.time
+          && request.resource.data.reviewNote == null
+          && request.resource.data.reviewedBy == null
+          && request.resource.data.reviewedAt == null
+          && request.resource.data.review == (get(taskPath(tid)).data.reviewerId == null
+              ? (request.resource.data.isFinal ? 'approved' : null)
+              : 'pending');
+
+        // review: only the task's reviewer (or an admin), only a pending submission, and only together with the task update
+        allow update: if active()
+          && (get(taskPath(tid)).data.reviewerId == request.auth.uid || isAdmin())
+          && resource.data.review == 'pending'
+          && changed(['review', 'reviewNote', 'reviewedBy', 'reviewedAt'])
+          && request.resource.data.review in ['approved', 'changes_requested']
+          && request.resource.data.reviewedBy == request.auth.uid
+          && request.resource.data.reviewedAt == request.time
+          && getAfter(taskPath(tid)).data.reviewSub == sid;
+
+        allow delete: if false;
+      }
+    }
+  }
+}
