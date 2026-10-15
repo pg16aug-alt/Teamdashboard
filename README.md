@@ -37,3 +37,10 @@ npm test                 # security rules, against the Firestore emulator (needs
 npm run dev:emulator     # terminal 1: app wired to local emulators
 npm run test:e2e         # terminal 2: full browser test (sign-up -> tasks -> review -> attendance -> Excel)
 ```
+
+## Using Claude Code with Firebase (optional)
+`.mcp.json` registers Firebase's official MCP server, so Claude Code on your computer can create the project, enable Auth, and deploy for you.
+```bash
+npx firebase login              # once, in a terminal
+claude                          # open Claude Code in this folder and approve the "firebase" server when asked
+```
